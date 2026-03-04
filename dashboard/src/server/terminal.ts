@@ -64,6 +64,14 @@ async function handleTerminalConnection(ws: WebSocket, engineerId: string) {
 
     ws.send('\x1b[32mConnected to ' + engineer.name + '\x1b[0m\r\n');
 
+    // Enable tmux mouse mode for scrolling support
+    // Small delay to let tmux attach before sending the command
+    setTimeout(() => {
+      try {
+        stream.write('tmux set -g mouse on 2>/dev/null; clear\n');
+      } catch { /* ignore */ }
+    }, 500);
+
     // Container → Browser
     stream.on('data', (chunk: Buffer) => {
       if (ws.readyState === WebSocket.OPEN) {

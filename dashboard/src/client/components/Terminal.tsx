@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Terminal as XTerm } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
+import { ClipboardAddon } from '@xterm/addon-clipboard';
 import '@xterm/xterm/css/xterm.css';
 
 interface Props {
@@ -23,12 +24,13 @@ export default function TerminalView({ engineerId, engineerName, hideHeader }: P
     const term = new XTerm({
       cursorBlink: true,
       fontSize: 13,
+      scrollback: 10000,
       fontFamily: "'JetBrains Mono', 'Cascadia Code', 'Fira Code', monospace",
       theme: {
         background: '#0a0a0f',
         foreground: '#e4e4e7',
         cursor: '#38bdf8',
-        selectionBackground: '#38bdf833',
+        selectionBackground: '#38bdf855',
         black: '#09090b',
         red: '#ef4444',
         green: '#22c55e',
@@ -50,8 +52,10 @@ export default function TerminalView({ engineerId, engineerName, hideHeader }: P
 
     const fitAddon = new FitAddon();
     const webLinksAddon = new WebLinksAddon();
+    const clipboardAddon = new ClipboardAddon();
     term.loadAddon(fitAddon);
     term.loadAddon(webLinksAddon);
+    term.loadAddon(clipboardAddon);
     term.open(containerRef.current);
 
     termRef.current = term;
@@ -99,6 +103,32 @@ export default function TerminalView({ engineerId, engineerName, hideHeader }: P
       }
     });
 
+    // Ctrl+Shift+C = copy selection, Ctrl+Shift+V = paste
+    term.attachCustomKeyEventHandler((ev) => {
+      if (ev.type !== 'keydown') return true;
+      if (ev.ctrlKey && ev.shiftKey && ev.key === 'C') {
+        const sel = term.getSelection();
+        if (sel) navigator.clipboard.writeText(sel);
+        return false; // prevent sending to terminal
+      }
+      if (ev.ctrlKey && ev.shiftKey && ev.key === 'V') {
+        navigator.clipboard.readText().then(text => {
+          if (ws.readyState === WebSocket.OPEN) ws.send(text);
+        });
+        return false;
+      }
+      return true;
+    });
+
+    // Right-click paste
+    const handleContextMenu = (ev: MouseEvent) => {
+      ev.preventDefault();
+      navigator.clipboard.readText().then(text => {
+        if (ws.readyState === WebSocket.OPEN) ws.send(text);
+      }).catch(() => {});
+    };
+    containerRef.current.addEventListener('contextmenu', handleContextMenu);
+
     // Handle resize with debounce
     let resizeTimer: ReturnType<typeof setTimeout>;
     const handleResize = () => {
@@ -114,9 +144,11 @@ export default function TerminalView({ engineerId, engineerName, hideHeader }: P
     const resizeObserver = new ResizeObserver(handleResize);
     resizeObserver.observe(containerRef.current);
 
+    const containerEl = containerRef.current;
     return () => {
       clearTimeout(resizeTimer);
       resizeObserver.disconnect();
+      containerEl?.removeEventListener('contextmenu', handleContextMenu);
       ws.close();
       term.dispose();
     };
