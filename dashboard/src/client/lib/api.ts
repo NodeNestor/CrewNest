@@ -79,9 +79,17 @@ export const deleteProject = (id: string) =>
 
 // --- Engineers ---
 
+export interface ImageTier {
+  value: string;
+  label: string;
+  description: string;
+  hasVnc: boolean;
+}
+
+export const fetchImageTiers = () => request<ImageTier[]>('/engineers/images');
 export const fetchEngineers = () => request<Engineer[]>('/engineers');
 export const fetchEngineer = (id: string) => request<Engineer>(`/engineers/${id}`);
-export const createEngineer = (data: { name: string; project_id?: string; role?: string; image?: string; ssh_port?: number; api_port?: number; vnc_port?: number }) =>
+export const createEngineer = (data: { name: string; project_id?: string; role?: string; image?: string }) =>
   request<Engineer>('/engineers', { method: 'POST', body: JSON.stringify(data) });
 export const updateEngineer = (id: string, data: Partial<Engineer>) =>
   request<Engineer>(`/engineers/${id}`, { method: 'PUT', body: JSON.stringify(data) });

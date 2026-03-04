@@ -1,14 +1,13 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MessageSquare, Terminal as TermIcon, Monitor, Play, Square, Columns, Maximize2, Bot } from 'lucide-react';
+import { Terminal as TermIcon, Monitor, Play, Square, Columns, Maximize2, Bot } from 'lucide-react';
 import StatusBar from '../components/StatusBar';
-import ChatBox from '../components/ChatBox';
 import TerminalView from '../components/Terminal';
 import VncViewer from '../components/VncViewer';
 import ResizableSplit from '../components/ResizableSplit';
 import { fetchEngineers, startEngineer, stopEngineer, ensureOrchestrator, type Engineer } from '../lib/api';
 
-type Layout = 'terminal' | 'desktop' | 'split' | 'chat';
+type Layout = 'terminal' | 'desktop' | 'split';
 
 export default function CommandCenter() {
   const navigate = useNavigate();
@@ -118,14 +117,6 @@ export default function CommandCenter() {
             </button>
           </>
         )}
-        <button
-          onClick={() => setLayout('chat')}
-          className={`flex items-center gap-1.5 px-2.5 py-1 text-xs rounded transition-colors ${
-            layout === 'chat' ? 'bg-nest-600/20 text-nest-300' : 'text-gray-500 hover:text-gray-300'
-          }`}
-        >
-          <MessageSquare size={12} /> Chat
-        </button>
 
         <div className="w-px h-4 bg-gray-700 mx-1" />
 
@@ -177,8 +168,6 @@ export default function CommandCenter() {
 
       {/* Content area */}
       <div className="flex-1 overflow-hidden" style={{ minHeight: 0 }}>
-        {layout === 'chat' && <ChatBox />}
-
         {layout === 'terminal' && selected && isRunning && (
           <TerminalView key={`term-${selected.id}`} engineerId={selected.id} engineerName={selected.name} />
         )}
@@ -195,7 +184,7 @@ export default function CommandCenter() {
           />
         )}
 
-        {layout !== 'chat' && selected && !isRunning && (
+        {selected && !isRunning && (
           <div className="flex items-center justify-center h-full text-gray-600">
             <div className="text-center">
               <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-800/50 flex items-center justify-center">
@@ -221,7 +210,7 @@ export default function CommandCenter() {
           </div>
         )}
 
-        {layout !== 'chat' && engineers.length === 0 && (
+        {engineers.length === 0 && (
           <div className="flex items-center justify-center h-full text-gray-600">
             <p className="text-sm">Setting up orchestrator...</p>
           </div>

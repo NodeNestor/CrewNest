@@ -1,20 +1,17 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Play, Square, Terminal as TermIcon, Monitor, MessageSquare, Columns } from 'lucide-react';
+import { ArrowLeft, Play, Square, Terminal as TermIcon, Monitor, Columns } from 'lucide-react';
 import TerminalView from '../components/Terminal';
 import VncViewer from '../components/VncViewer';
-import ChatBox from '../components/ChatBox';
 import ResizableSplit from '../components/ResizableSplit';
 import { fetchEngineer, startEngineer, stopEngineer, type Engineer } from '../lib/api';
 
-type LeftTab = 'terminal' | 'chat';
 type ViewMode = 'split' | 'terminal' | 'desktop';
 
 export default function ImmersiveView() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [engineer, setEngineer] = useState<Engineer | null>(null);
-  const [leftTab, setLeftTab] = useState<LeftTab>('terminal');
   const [viewMode, setViewMode] = useState<ViewMode>('split');
   const [loading, setLoading] = useState(false);
 
@@ -150,39 +147,12 @@ export default function ImmersiveView() {
         ) : effectiveMode === 'desktop' ? (
           <VncViewer vncPort={engineer.vnc_port!} engineerName={engineer.name} />
         ) : (
-          /* Split: terminal/chat left + VNC right */
+          /* Split: terminal left + VNC right */
           <ResizableSplit
             initialLeftPercent={30}
             minLeftPercent={20}
             maxLeftPercent={60}
-            left={
-              <div className="flex flex-col h-full" style={{ minHeight: 0 }}>
-                <div className="flex border-b border-gray-800 shrink-0">
-                  <button
-                    onClick={() => setLeftTab('terminal')}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs border-b-2 transition-colors ${
-                      leftTab === 'terminal' ? 'border-nest-500 text-nest-300' : 'border-transparent text-gray-500 hover:text-gray-300'
-                    }`}
-                  >
-                    <TermIcon size={11} /> Terminal
-                  </button>
-                  <button
-                    onClick={() => setLeftTab('chat')}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs border-b-2 transition-colors ${
-                      leftTab === 'chat' ? 'border-nest-500 text-nest-300' : 'border-transparent text-gray-500 hover:text-gray-300'
-                    }`}
-                  >
-                    <MessageSquare size={11} /> Chat
-                  </button>
-                </div>
-                <div className="flex-1 overflow-hidden" style={{ minHeight: 0 }}>
-                  {leftTab === 'terminal' && (
-                    <TerminalView key={`immersive-split-term-${engineer.id}`} engineerId={engineer.id} engineerName={engineer.name} hideHeader />
-                  )}
-                  {leftTab === 'chat' && <ChatBox />}
-                </div>
-              </div>
-            }
+            left={<TerminalView key={`immersive-split-term-${engineer.id}`} engineerId={engineer.id} engineerName={engineer.name} hideHeader />}
             right={<VncViewer vncPort={engineer.vnc_port!} engineerName={engineer.name} />}
           />
         )}

@@ -8,6 +8,40 @@ import * as dockerOps from '../docker.js';
 
 const app = new Hono();
 
+// Available image tiers
+const IMAGE_TIERS = [
+  { value: 'agentcore:minimal', label: 'Minimal', description: 'Claude Code only, no desktop', hasVnc: false },
+  { value: 'agentcore:ubuntu', label: 'Ubuntu Desktop', description: 'Full desktop with Chrome, VNC', hasVnc: true },
+  { value: 'agentcore:kali', label: 'Kali Linux', description: 'Security tools + desktop', hasVnc: true },
+];
+
+// Auto-allocate ports that don't conflict with existing engineers
+function allocatePorts(hasVnc: boolean): { ssh_port: number; api_port: number; vnc_port: number | null } {
+  const engineers = listEngineers();
+  const usedPorts = new Set<number>();
+  for (const e of engineers) {
+    if (e.ssh_port) usedPorts.add(e.ssh_port);
+    if (e.api_port) usedPorts.add(e.api_port);
+    if (e.vnc_port) usedPorts.add(e.vnc_port);
+  }
+
+  const findFree = (start: number): number => {
+    let port = start;
+    while (usedPorts.has(port)) port++;
+    usedPorts.add(port);
+    return port;
+  };
+
+  return {
+    ssh_port: findFree(2222),
+    api_port: findFree(8081),
+    vnc_port: hasVnc ? findFree(6080) : null,
+  };
+}
+
+// Get available image tiers
+app.get('/images', (c) => c.json(IMAGE_TIERS));
+
 // List all engineers with live Docker status
 app.get('/', async (c) => {
   const engineers = listEngineers();
@@ -35,15 +69,20 @@ app.post('/', async (c) => {
     return c.json({ error: `Engineer "${body.name}" already exists` }, 409);
   }
 
+  // Auto-allocate ports if not provided
+  const imageTier = IMAGE_TIERS.find(t => t.value === body.image);
+  const hasVnc = imageTier?.hasVnc ?? (body.image?.includes('ubuntu') || body.image?.includes('kali'));
+  const ports = allocatePorts(hasVnc);
+
   const engineer = createEngineer({
     id: nanoid(10),
     name: body.name,
     project_id: body.project_id,
     role: body.role,
-    image: body.image,
-    ssh_port: body.ssh_port,
-    api_port: body.api_port,
-    vnc_port: body.vnc_port,
+    image: body.image || 'agentcore:minimal',
+    ssh_port: body.ssh_port || ports.ssh_port,
+    api_port: body.api_port || ports.api_port,
+    vnc_port: body.vnc_port ?? ports.vnc_port,
     capabilities: body.capabilities ? JSON.stringify(body.capabilities) : '[]',
     env_overrides: body.env_overrides ? JSON.stringify(body.env_overrides) : '{}',
   });

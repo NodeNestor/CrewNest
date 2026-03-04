@@ -4,9 +4,9 @@ import EngineerCard from '../components/EngineerCard';
 import TerminalView from '../components/Terminal';
 import VncViewer from '../components/VncViewer';
 import {
-  fetchEngineers, fetchProjects, createEngineer,
+  fetchEngineers, fetchProjects, fetchImageTiers, createEngineer,
   startEngineer, stopEngineer, restartEngineer, deleteEngineer, fetchEngineerLogs,
-  type Engineer, type Project,
+  type Engineer, type Project, type ImageTier,
 } from '../lib/api';
 
 type DetailTab = 'info' | 'terminal' | 'vnc' | 'logs';
@@ -14,14 +14,12 @@ type DetailTab = 'info' | 'terminal' | 'vnc' | 'logs';
 export default function Engineers() {
   const [engineers, setEngineers] = useState<Engineer[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [imageTiers, setImageTiers] = useState<ImageTier[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [selected, setSelected] = useState<Engineer | null>(null);
   const [detailTab, setDetailTab] = useState<DetailTab>('info');
   const [logs, setLogs] = useState('');
-  const [form, setForm] = useState({
-    name: '', project_id: '', role: '', image: 'agentcore:minimal',
-    ssh_port: '', api_port: '', vnc_port: '',
-  });
+  const [form, setForm] = useState({ name: '', project_id: '', role: '', image: 'agentcore:minimal' });
 
   const load = () => {
     fetchEngineers().then(setEngineers).catch(() => {});
@@ -30,6 +28,7 @@ export default function Engineers() {
 
   useEffect(() => {
     load();
+    fetchImageTiers().then(setImageTiers).catch(() => {});
     const interval = setInterval(load, 5000);
     return () => clearInterval(interval);
   }, []);
@@ -41,11 +40,8 @@ export default function Engineers() {
       project_id: form.project_id || undefined,
       role: form.role || undefined,
       image: form.image,
-      ssh_port: form.ssh_port ? parseInt(form.ssh_port) : undefined,
-      api_port: form.api_port ? parseInt(form.api_port) : undefined,
-      vnc_port: form.vnc_port ? parseInt(form.vnc_port) : undefined,
     });
-    setForm({ name: '', project_id: '', role: '', image: 'agentcore:minimal', ssh_port: '', api_port: '', vnc_port: '' });
+    setForm({ name: '', project_id: '', role: '', image: 'agentcore:minimal' });
     setShowModal(false);
     load();
   };
@@ -80,6 +76,8 @@ export default function Engineers() {
     { id: 'vnc', label: 'Desktop', icon: Monitor, needsVnc: true },
     { id: 'logs', label: 'Logs', icon: FileText },
   ];
+
+  const selectedTier = imageTiers.find(t => t.value === form.image);
 
   return (
     <div className="flex h-full">
@@ -207,6 +205,30 @@ export default function Engineers() {
                   className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-nest-500/50" />
               </div>
 
+              <div>
+                <label className="block text-xs text-gray-400 mb-1.5">Image</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {imageTiers.map(tier => (
+                    <button
+                      key={tier.value}
+                      type="button"
+                      onClick={() => setForm({ ...form, image: tier.value })}
+                      className={`flex flex-col items-start p-3 rounded-lg border text-left transition-colors ${
+                        form.image === tier.value
+                          ? 'border-nest-500 bg-nest-600/10 text-nest-300'
+                          : 'border-gray-700 bg-gray-800 text-gray-400 hover:border-gray-600'
+                      }`}
+                    >
+                      <span className="text-sm font-medium">{tier.label}</span>
+                      <span className="text-[10px] text-gray-500 mt-0.5">{tier.description}</span>
+                    </button>
+                  ))}
+                </div>
+                {selectedTier?.hasVnc && (
+                  <p className="text-[10px] text-gray-500 mt-1.5">Desktop + VNC will be enabled automatically.</p>
+                )}
+              </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs text-gray-400 mb-1">Project</label>
@@ -220,34 +242,6 @@ export default function Engineers() {
                   <label className="block text-xs text-gray-400 mb-1">Role</label>
                   <input placeholder="e.g. backend, research" value={form.role}
                     onChange={e => setForm({ ...form, role: e.target.value })}
-                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-nest-500/50" />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs text-gray-400 mb-1">Docker Image</label>
-                <input placeholder="agentcore:minimal" value={form.image}
-                  onChange={e => setForm({ ...form, image: e.target.value })}
-                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-nest-500/50" />
-              </div>
-
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-xs text-gray-400 mb-1">SSH Port</label>
-                  <input placeholder="2222" value={form.ssh_port}
-                    onChange={e => setForm({ ...form, ssh_port: e.target.value })}
-                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-nest-500/50" />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-400 mb-1">API Port</label>
-                  <input placeholder="8081" value={form.api_port}
-                    onChange={e => setForm({ ...form, api_port: e.target.value })}
-                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-nest-500/50" />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-400 mb-1">VNC Port</label>
-                  <input placeholder="6080" value={form.vnc_port}
-                    onChange={e => setForm({ ...form, vnc_port: e.target.value })}
                     className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-nest-500/50" />
                 </div>
               </div>
