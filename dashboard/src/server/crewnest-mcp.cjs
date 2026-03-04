@@ -59,17 +59,14 @@ const TOOLS = [
   },
   {
     name: 'crewnest_create_engineer',
-    description: 'Create a new engineer. Specify name, role, image (agentcore:minimal or agentcore:ubuntu), and port numbers.',
+    description: 'Create a new engineer. Ports are auto-allocated. Available images: agentcore:minimal (Claude Code only), agentcore:ubuntu (full desktop + Chrome + VNC), agentcore:kali (security tools + desktop).',
     inputSchema: {
       type: 'object',
       properties: {
         name: { type: 'string', description: 'Unique engineer name (e.g. poly-analyst)' },
         role: { type: 'string', description: 'Role description (e.g. backend, research, frontend)' },
-        image: { type: 'string', description: 'Docker image (agentcore:minimal or agentcore:ubuntu for desktop)', default: 'agentcore:minimal' },
+        image: { type: 'string', description: 'Docker image: agentcore:minimal (default, terminal only), agentcore:ubuntu (desktop + VNC), agentcore:kali (security + desktop)', default: 'agentcore:minimal' },
         project_id: { type: 'string', description: 'Project ID to assign to' },
-        ssh_port: { type: 'number', description: 'Host SSH port mapping' },
-        api_port: { type: 'number', description: 'Host API port mapping' },
-        vnc_port: { type: 'number', description: 'Host VNC port mapping (for ubuntu image)' },
       },
       required: ['name'],
     },

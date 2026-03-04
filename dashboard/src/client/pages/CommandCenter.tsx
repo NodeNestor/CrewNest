@@ -1,13 +1,13 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Terminal as TermIcon, Monitor, Play, Square, Columns, Maximize2, Bot } from 'lucide-react';
+import { Terminal as TermIcon, Monitor, Play, Square, Columns, Maximize2, Bot, LayoutGrid } from 'lucide-react';
 import StatusBar from '../components/StatusBar';
 import TerminalView from '../components/Terminal';
 import VncViewer from '../components/VncViewer';
 import ResizableSplit from '../components/ResizableSplit';
 import { fetchEngineers, startEngineer, stopEngineer, ensureOrchestrator, type Engineer } from '../lib/api';
 
-type Layout = 'terminal' | 'desktop' | 'split';
+type Layout = 'terminal' | 'desktop' | 'split' | 'multi';
 
 export default function CommandCenter() {
   const navigate = useNavigate();
@@ -26,7 +26,6 @@ export default function CommandCenter() {
     fetchEngineers().then(engs => {
       setEngineers(engs);
       const currentId = selectedIdRef.current;
-      // Only auto-select if nothing is selected or current selection was removed
       if (!currentId || !engs.find(e => e.id === currentId)) {
         const orch = engs.find(e => e.name === 'orchestrator');
         const running = engs.find(e => e.live_status?.running);
@@ -34,7 +33,7 @@ export default function CommandCenter() {
         if (pick) setSelectedId(pick.id);
       }
     }).catch(() => {});
-  }, []); // stable — reads selectedId from ref
+  }, []);
 
   useEffect(() => {
     ensureOrchestrator().then(() => {
@@ -56,6 +55,7 @@ export default function CommandCenter() {
   const isRunning = selected?.live_status?.running ?? false;
   const hasVnc = selected?.vnc_port != null;
   const isOrchestrator = selected?.name === 'orchestrator';
+  const runningEngineers = engineers.filter(e => e.live_status?.running);
 
   const handleStart = async () => {
     if (!selected) return;
@@ -83,6 +83,9 @@ export default function CommandCenter() {
     }
   };
 
+  // Grid layout for multi-view: 1 col for 1, 2 cols for 2-4, 3 cols for 5+
+  const gridCols = runningEngineers.length <= 1 ? 1 : runningEngineers.length <= 4 ? 2 : 3;
+
   return (
     <div className="flex flex-col h-full" style={{ minHeight: 0 }}>
       <StatusBar />
@@ -97,7 +100,7 @@ export default function CommandCenter() {
         >
           <TermIcon size={12} /> Terminal
         </button>
-        {hasVnc && (
+        {hasVnc && layout !== 'multi' && (
           <>
             <button
               onClick={() => setLayout('desktop')}
@@ -117,10 +120,20 @@ export default function CommandCenter() {
             </button>
           </>
         )}
+        {runningEngineers.length > 1 && (
+          <button
+            onClick={() => setLayout('multi')}
+            className={`flex items-center gap-1.5 px-2.5 py-1 text-xs rounded transition-colors ${
+              layout === 'multi' ? 'bg-nest-600/20 text-nest-300' : 'text-gray-500 hover:text-gray-300'
+            }`}
+          >
+            <LayoutGrid size={12} /> Multi ({runningEngineers.length})
+          </button>
+        )}
 
         <div className="w-px h-4 bg-gray-700 mx-1" />
 
-        {engineers.length > 0 && (
+        {engineers.length > 0 && layout !== 'multi' && (
           <div className="flex items-center gap-2 ml-auto">
             <select
               value={selectedId}
@@ -164,10 +177,50 @@ export default function CommandCenter() {
             )}
           </div>
         )}
+
+        {layout === 'multi' && (
+          <span className="text-xs text-gray-500 ml-auto">
+            Showing {runningEngineers.length} running engineers
+          </span>
+        )}
       </div>
 
       {/* Content area */}
       <div className="flex-1 overflow-hidden" style={{ minHeight: 0 }}>
+        {/* Multi-view: grid of all running engineers */}
+        {layout === 'multi' && (
+          <div
+            className="grid h-full"
+            style={{
+              gridTemplateColumns: `repeat(${gridCols}, 1fr)`,
+              gridAutoRows: '1fr',
+              minHeight: 0,
+            }}
+          >
+            {runningEngineers.map(eng => (
+              <div key={`multi-${eng.id}`} className="border border-gray-800 flex flex-col" style={{ minHeight: 0, overflow: 'hidden' }}>
+                <div className="flex items-center justify-between px-2 py-0.5 bg-gray-900/80 border-b border-gray-800 shrink-0">
+                  <span className="text-[10px] text-gray-300 font-medium truncate">{eng.name}</span>
+                  <button
+                    onClick={() => { setSelectedId(eng.id); setLayout('terminal'); }}
+                    className="text-[10px] text-gray-500 hover:text-nest-300 px-1"
+                  >
+                    focus
+                  </button>
+                </div>
+                <div className="flex-1" style={{ minHeight: 0 }}>
+                  {eng.vnc_port ? (
+                    <VncViewer vncPort={eng.vnc_port} engineerName={eng.name} />
+                  ) : (
+                    <TerminalView key={`multi-term-${eng.id}`} engineerId={eng.id} engineerName={eng.name} hideHeader />
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Single-view modes */}
         {layout === 'terminal' && selected && isRunning && (
           <TerminalView key={`term-${selected.id}`} engineerId={selected.id} engineerName={selected.name} />
         )}
@@ -184,7 +237,7 @@ export default function CommandCenter() {
           />
         )}
 
-        {selected && !isRunning && (
+        {layout !== 'multi' && selected && !isRunning && (
           <div className="flex items-center justify-center h-full text-gray-600">
             <div className="text-center">
               <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-800/50 flex items-center justify-center">
@@ -210,7 +263,7 @@ export default function CommandCenter() {
           </div>
         )}
 
-        {engineers.length === 0 && (
+        {layout !== 'multi' && engineers.length === 0 && (
           <div className="flex items-center justify-center h-full text-gray-600">
             <p className="text-sm">Setting up orchestrator...</p>
           </div>

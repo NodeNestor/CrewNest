@@ -16,7 +16,7 @@ services:
       - dashboard-data:/data
     environment:
       - CODEGATE_URL=http://host.docker.internal:9212
-      - CODEGATE_API_KEY=${CODEGATE_API_KEY:-cgk_dd5df83233603a065887ff73dc94bf15}
+      - CODEGATE_API_KEY=${CODEGATE_API_KEY:-}
       - HIVEMINDDB_URL=${HIVEMINDDB_URL:-http://host.docker.internal:8100}
       - GITHUB_TOKEN=${GITHUB_TOKEN:-}
       - DOCKER_NETWORK=crewnest-network
