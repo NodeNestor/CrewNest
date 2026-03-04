@@ -209,11 +209,7 @@ export default function CommandCenter() {
                   </button>
                 </div>
                 <div className="flex-1" style={{ minHeight: 0 }}>
-                  {eng.vnc_port ? (
-                    <VncViewer vncPort={eng.vnc_port} engineerName={eng.name} />
-                  ) : (
-                    <TerminalView key={`multi-term-${eng.id}`} engineerId={eng.id} engineerName={eng.name} hideHeader />
-                  )}
+                  <TerminalView key={`multi-term-${eng.id}`} engineerId={eng.id} engineerName={eng.name} hideHeader />
                 </div>
               </div>
             ))}

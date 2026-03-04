@@ -64,13 +64,13 @@ async function handleTerminalConnection(ws: WebSocket, engineerId: string) {
 
     ws.send('\x1b[32mConnected to ' + engineer.name + '\x1b[0m\r\n');
 
-    // Enable tmux mouse mode for scrolling support
-    // Small delay to let tmux attach before sending the command
-    setTimeout(() => {
-      try {
-        stream.write('tmux set -g mouse on 2>/dev/null; clear\n');
-      } catch { /* ignore */ }
-    }, 500);
+    // Enable tmux mouse mode via a separate exec (not through the stream,
+    // since the stream may be attached to Claude Code's input)
+    container.exec({
+      Cmd: ['su', '-', 'agent', '-c', 'tmux set -g mouse on 2>/dev/null || true'],
+      AttachStdout: false,
+      AttachStderr: false,
+    }).then(e => e.start({})).catch(() => {});
 
     // Container → Browser
     stream.on('data', (chunk: Buffer) => {
