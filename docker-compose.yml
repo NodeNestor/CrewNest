@@ -1,0 +1,29 @@
+networks:
+  crewnest:
+    name: crewnest-network
+
+volumes:
+  dashboard-data:
+
+services:
+  dashboard:
+    build: ./dashboard
+    container_name: crewnest
+    ports:
+      - "3000:3000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - dashboard-data:/data
+    environment:
+      - CODEGATE_URL=http://host.docker.internal:9212
+      - CODEGATE_API_KEY=${CODEGATE_API_KEY:-cgk_dd5df83233603a065887ff73dc94bf15}
+      - HIVEMINDDB_URL=${HIVEMINDDB_URL:-http://host.docker.internal:8100}
+      - GITHUB_TOKEN=${GITHUB_TOKEN:-}
+      - DOCKER_NETWORK=crewnest-network
+      - DB_PATH=/data/crewnest.db
+      - DEFAULT_MODEL=${DEFAULT_MODEL:-claude-sonnet-4-20250514}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - crewnest
+    restart: unless-stopped

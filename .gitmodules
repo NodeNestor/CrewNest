@@ -1,0 +1,9 @@
+[submodule "hiveminddb"]
+	path = hiveminddb
+	url = https://github.com/NodeNestor/HiveMindDB.git
+[submodule "codegate"]
+	path = codegate
+	url = https://github.com/NodeNestor/CodeGate.git
+[submodule "agentcore"]
+	path = agentcore
+	url = https://github.com/NodeNestor/AgentCore.git
